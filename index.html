@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Global AI Startup Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg-base:#0f1117;--bg-card:#181b24;--bg-card-hover:#1e2230;--bg-elevated:#222639;
+  --border:#2a2e3e;--border-light:#353a4f;
+  --text-primary:#e8eaf0;--text-secondary:#8b90a0;--text-muted:#5c6175;
+  --pre-seed:#4ade80;--seed:#60a5fa;--series-a:#fb923c;
+  --na:#818cf8;--eu:#60a5fa;--apac:#fbbf24;--india:#f472b6;--me:#2dd4bf;--africa:#fb923c;--latam:#c084fc;
+  --accent:#818cf8;--accent-dim:rgba(129,140,248,0.15);
+  --radius:8px;--radius-lg:12px;
+}
+html,body{height:100%;overflow:hidden;font-family:'Inter',sans-serif;background:var(--bg-base);color:var(--text-primary)}
+.dashboard{display:grid;grid-template-rows:auto 1fr;height:100dvh}
+.header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 24px;background:var(--bg-card);border-bottom:1px solid var(--border);
+  position:sticky;top:0;z-index:100;
+}
+.header h1{font-size:18px;font-weight:700;letter-spacing:-0.3px}
+.header h1 span{color:var(--accent);margin-right:6px}
+.header-badge{font-size:11px;color:var(--text-muted);background:var(--bg-elevated);padding:4px 10px;border-radius:20px;border:1px solid var(--border)}
+.tabs{display:flex;gap:2px;align-items:center}
+.tab{
+  padding:8px 16px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:500;
+  color:var(--text-secondary);transition:all 0.18s cubic-bezier(0.16,1,0.3,1);border:none;background:transparent;
+}
+.tab:hover{color:var(--text-primary);background:var(--bg-elevated)}
+.tab.active{color:var(--text-primary);background:var(--accent-dim)}
+.main{overflow-y:auto;overscroll-behavior:contain;padding:24px}
+.panel{display:none;opacity:0;transition:opacity 0.2s ease}
+.panel.active{display:block;opacity:1}
+.metrics-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:24px}
+.metric-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px 20px;}
+.metric-card .label{font-size:12px;color:var(--text-muted);font-weight:500;text-transform:uppercase;letter-spacing:0.5px}
+.metric-card .value{font-size:28px;font-weight:700;margin-top:4px;font-variant-numeric:tabular-nums lining-nums}
+.metric-card .value.pre-seed{color:var(--pre-seed)}
+.metric-card .value.seed{color:var(--seed)}
+.metric-card .value.series-a{color:var(--series-a)}
+.charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px}
+.chart-box{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;}
+.chart-box h3{font-size:14px;font-weight:600;margin-bottom:16px;color:var(--text-secondary)}
+.chart-box canvas{max-height:340px}
+.map-container{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:24px;margin-bottom:24px;position:relative;overflow:hidden;}
+.map-container h3{font-size:14px;font-weight:600;margin-bottom:16px;color:var(--text-secondary)}
+.world-map{position:relative;width:100%;height:360px}
+.region-bubble{position:absolute;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-direction:column;cursor:pointer;transition:transform 0.18s cubic-bezier(0.16,1,0.3,1);border:2px solid;}
+.region-bubble:hover{transform:scale(1.1)}
+.region-bubble .count{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums}
+.region-bubble .rname{font-size:8px;font-weight:600;text-transform:uppercase;letter-spacing:0.3px;text-align:center;line-height:1.1;margin-top:2px;overflow:hidden;width:92%;word-wrap:break-word}
+.filters-bar{display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;align-items:center;}
+.search-input{flex:1;min-width:200px;padding:10px 16px;border-radius:var(--radius);background:var(--bg-elevated);border:1px solid var(--border);color:var(--text-primary);font-size:14px;font-family:inherit;outline:none;transition:border-color 0.18s;}
+.search-input:focus{border-color:var(--accent)}
+.search-input::placeholder{color:var(--text-muted)}
+.filter-select{padding:10px 12px;border-radius:var(--radius);background:var(--bg-elevated);border:1px solid var(--border);color:var(--text-primary);font-size:13px;font-family:inherit;cursor:pointer;min-width:140px;outline:none;}
+.filter-select:focus{border-color:var(--accent)}
+.count-indicator{font-size:13px;color:var(--text-secondary);white-space:nowrap}
+.data-table{width:100%;border-collapse:collapse;font-size:13px}
+.data-table thead{position:sticky;top:0;z-index:2;background:var(--bg-card)}
+.data-table th{text-align:left;padding:10px 12px;font-weight:600;color:var(--text-muted);border-bottom:1px solid var(--border);cursor:pointer;user-select:none;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;}
+.data-table th:hover{color:var(--text-primary)}
+.data-table th .sort-arrow{margin-left:4px;opacity:0.5}
+.data-table td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:top}
+.data-table tbody tr{transition:background 0.1s}
+.data-table tbody tr:hover{background:var(--bg-card-hover)}
+.data-table tbody tr.expanded{background:var(--bg-elevated)}
+.company-link{color:var(--accent);text-decoration:none;font-weight:500}
+.company-link:hover{text-decoration:underline}
+.expand-row{display:none;background:var(--bg-elevated)}
+.expand-row.show{display:table-row}
+.expand-content{padding:16px 12px;font-size:13px;line-height:1.6;color:var(--text-secondary)}
+.expand-content strong{color:var(--text-primary);font-weight:600}
+.badge{display:inline-block;padding:3px 8px;border-radius:4px;font-size:11px;font-weight:600;white-space:nowrap;}
+.badge-pre-seed{background:rgba(74,222,128,0.15);color:var(--pre-seed)}
+.badge-seed{background:rgba(96,165,250,0.15);color:var(--seed)}
+.badge-series-a{background:rgba(251,146,60,0.15);color:var(--series-a)}
+.badge-na{background:rgba(129,140,248,0.15);color:var(--na)}
+.badge-eu{background:rgba(96,165,250,0.15);color:var(--eu)}
+.badge-apac{background:rgba(251,191,36,0.15);color:var(--apac)}
+.badge-india{background:rgba(244,114,182,0.15);color:var(--india)}
+.badge-me{background:rgba(45,212,191,0.15);color:var(--me)}
+.badge-africa{background:rgba(251,146,60,0.15);color:var(--africa)}
+.badge-latam{background:rgba(192,132,252,0.15);color:var(--latam)}
+.region-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px}
+.region-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;cursor:pointer;transition:all 0.18s cubic-bezier(0.16,1,0.3,1);}
+.region-card:hover{border-color:var(--border-light);transform:translateY(-1px)}
+.region-card.expanded{grid-column:1/-1}
+.region-card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.region-card-header h3{font-size:16px;font-weight:600}
+.region-card-header .rcount{font-size:24px;font-weight:700;font-variant-numeric:tabular-nums}
+.region-companies{display:none;margin-top:16px}
+.region-card.expanded .region-companies{display:block}
+.mini-company{padding:12px;border:1px solid var(--border);border-radius:var(--radius);margin-bottom:8px;background:var(--bg-elevated);}
+.mini-company .mc-header{display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap}
+.mini-company .mc-name{font-weight:600;font-size:13px}
+.mini-company .mc-desc{font-size:12px;color:var(--text-secondary);line-height:1.5}
+.vertical-section{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:12px;overflow:hidden;}
+.vertical-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;cursor:pointer;transition:background 0.18s;}
+.vertical-header:hover{background:var(--bg-card-hover)}
+.vertical-header h3{font-size:14px;font-weight:600}
+.vertical-header .vcount{font-size:12px;font-weight:600;color:var(--text-muted);background:var(--bg-elevated);padding:2px 8px;border-radius:4px;}
+.vertical-body{display:none;padding:0 20px 16px;}
+.vertical-section.open .vertical-body{display:block}
+.ideas-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));gap:16px}
+.idea-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;transition:border-color 0.18s;}
+.idea-card:hover{border-color:var(--border-light)}
+.idea-card h3{font-size:15px;font-weight:600;margin-bottom:8px;line-height:1.4}
+.idea-card .idea-meta{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.idea-card .idea-desc{font-size:12px;color:var(--text-secondary);line-height:1.6;margin-bottom:12px}
+.idea-card .idea-detail{font-size:12px;margin-bottom:6px;color:var(--text-secondary)}
+.idea-card .idea-detail strong{color:var(--text-primary)}
+.badge-easy{background:rgba(74,222,128,0.15);color:#4ade80}
+.badge-medium{background:rgba(251,191,36,0.15);color:#fbbf24}
+.badge-hard{background:rgba(239,68,68,0.15);color:#ef4444}
+.fintech-header{background:linear-gradient(135deg,rgba(129,140,248,0.08),rgba(96,165,250,0.08));border:1px solid var(--border);border-radius:var(--radius-lg);padding:24px;margin-bottom:20px;}
+.fintech-header h2{font-size:20px;font-weight:700;margin-bottom:8px}
+.fintech-header p{font-size:13px;color:var(--text-secondary);line-height:1.6;max-width:700px}
+.fintech-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));gap:16px}
+.fintech-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;transition:border-color 0.18s;}
+.fintech-card:hover{border-color:var(--border-light)}
+.fintech-card h3{font-size:15px;font-weight:600;margin-bottom:4px}
+.fintech-card .fc-vertical{font-size:11px;color:var(--text-muted);margin-bottom:8px}
+.fintech-card .fc-meta{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.fintech-card .fc-desc{font-size:12px;color:var(--text-secondary);line-height:1.6;margin-bottom:8px}
+.fintech-card .fc-detail{font-size:12px;color:var(--text-secondary);margin-bottom:4px}
+.fintech-card .fc-detail strong{color:var(--text-primary)}
+.pagination{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:16px}
+.page-btn{padding:6px 12px;border-radius:var(--radius);background:var(--bg-elevated);border:1px solid var(--border);color:var(--text-secondary);font-size:13px;cursor:pointer;font-family:inherit;transition:all 0.18s;}
+.page-btn:hover{border-color:var(--border-light);color:var(--text-primary)}
+.page-btn.active{background:var(--accent-dim);color:var(--accent);border-color:var(--accent)}
+.page-btn:disabled{opacity:0.3;cursor:not-allowed}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+::-webkit-scrollbar-thumb:hover{background:var(--border-light)}
+@media(max-width:768px){.header{flex-direction:column;gap:8px;padding:12px 16px}.tabs{overflow-x:auto;width:100%;-webkit-overflow-scrolling:touch}.tab{padding:6px 12px;font-size:12px;white-space:nowrap}.main{padding:16px}.charts-grid{grid-template-columns:1fr}.metrics-row{grid-template-columns:repeat(2,1fr)}.region-cards{grid-template-columns:1fr}.ideas-grid{grid-template-columns:1fr}.fintech-grid{grid-template-columns:1fr}.filters-bar{flex-direction:column}.search-input{min-width:auto;width:100%}.world-map{height:500px}}
+@media(max-width:480px){.metrics-row{grid-template-columns:1fr 1fr}.metric-card .value{font-size:22px}}
+</style>
+</head>
+<body>
+<div class="dashboard">
+<header class="header">
+  <h1><span>&#9672;</span> Global AI Startup Tracker</h1>
+  <nav class="tabs" id="tabs">
+    <button class="tab active" data-tab="overview">Overview</button>
+    <button class="tab" data-tab="directory">Directory</button>
+    <button class="tab" data-tab="worldmap">World Map</button>
+    <button class="tab" data-tab="verticals">Verticals</button>
+    <button class="tab" data-tab="ideas">Startup Ideas</button>
+    <button class="tab" data-tab="fintech">Fintech Focus</button>
+  </nav>
+  <span class="header-badge">Last Updated: March 2, 2026</span>
+</header>
+<div class="main" id="mainContent">
+<div class="panel active" id="panel-overview">
+  <div class="metrics-row" id="metricsRow"></div>
+  <div class="map-container"><h3>Global Distribution</h3><div class="world-map" id="worldMapOverview"></div></div>
+  <div class="charts-grid">
+    <div class="chart-box" style="min-height:380px"><h3>Stage Distribution</h3><div style="position:relative;height:320px"><canvas id="stageDonut"></canvas></div></div>
+    <div class="chart-box" style="min-height:420px"><h3>Top 12 Verticals</h3><div style="position:relative;height:360px"><canvas id="verticalsBar"></canvas></div></div>
+    <div class="chart-box" style="min-height:380px"><h3>Companies by Region</h3><div style="position:relative;height:320px"><canvas id="regionBar"></canvas></div></div>
+    <div class="chart-box" style="min-height:380px"><h3>Founded Year Distribution</h3><div style="position:relative;height:320px"><canvas id="yearBar"></canvas></div></div>
+  </div>
+</div>
+<div class="panel" id="panel-directory">
+  <div class="filters-bar">
+    <input type="text" class="search-input" id="dirSearch" placeholder="Search companies, verticals, locations...">
+    <select class="filter-select" id="dirStage" title="Stage filter"><option value="">All Stages</option><option value="Pre-Seed">Pre-Seed</option><option value="Seed">Seed</option><option value="Series A">Series A</option></select>
+    <select class="filter-select" id="dirRegion"><option value="">All Regions</option><option value="North America">North America</option><option value="Europe">Europe</option><option value="Asia-Pacific">Asia-Pacific</option><option value="India &amp; South Asia">India &amp; South Asia</option><option value="Middle East">Middle East</option><option value="Africa">Africa</option><option value="Latin America">Latin America</option></select>
+    <span class="count-indicator" id="dirCount"></span>
+  </div>
+  <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden"><div style="overflow-x:auto"><table class="data-table" id="dirTable"><thead><tr><th data-sort="name">Company <span class="sort-arrow"></span></th><th data-sort="stage">Stage <span class="sort-arrow"></span></th><th data-sort="region">Region <span class="sort-arrow"></span></th><th data-sort="founded">Founded <span class="sort-arrow"></span></th><th data-sort="vertical">Vertical <span class="sort-arrow"></span></th><th data-sort="funding">Funding <span class="sort-arrow"></span></th><th data-sort="location">Location <span class="sort-arrow"></span></th></tr></thead><tbody id="dirBody"></tbody></table></div></div>
+  <div class="pagination" id="dirPagination"></div>
+</div>
+<div class="panel" id="panel-worldmap">
+  <h2 style="font-size:18px;font-weight:700;margin-bottom:4px">Regions</h2>
+  <p style="font-size:13px;color:var(--text-secondary);margin-bottom:20px">Click a region to explore its companies</p>
+  <div class="region-cards" id="regionCards"></div>
+</div>
+<div class="panel" id="panel-verticals">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:12px">
+    <div><h2 style="font-size:18px;font-weight:700;margin-bottom:4px">Verticals</h2><p style="font-size:13px;color:var(--text-secondary)" id="verticalSummary"></p></div>
+    <input type="text" class="search-input" id="verticalSearch" placeholder="Search verticals..." style="flex:0 1 260px;min-width:180px">
+  </div>
+  <div id="verticalsList"></div>
+</div>
+<div class="panel" id="panel-ideas">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:12px">
+    <div><h2 style="font-size:18px;font-weight:700;margin-bottom:4px">Startup Ideas</h2><p style="font-size:13px;color:var(--text-secondary)">23 vetted AI startup opportunities</p></div>
+    <input type="text" class="search-input" id="ideasSearch" placeholder="Search ideas..." style="flex:0 1 260px;min-width:180px">
+  </div>
+  <div class="ideas-grid" id="ideasGrid"></div>
+</div>
+<div class="panel" id="panel-fintech">
+  <div class="fintech-header"><h2>AI + Fintech Intersection</h2><p>Companies operating at the intersection of artificial intelligence and financial services — spanning payments, lending, insurance, accounting, banking, credit, and e-commerce infrastructure.</p></div>
+  <div class="fintech-grid" id="fintechGrid"></div>
+</div>
+</div>
+</div>
+<script src="data/global_ai_startups.json" type="application/json" id="companiesData"></script>
+<script src="data/ai_startup_ideas.json" type="application/json" id="ideasData"></script>
+<script>
+// NOTE: This version loads data from external JSON files.
+// For standalone operation, see the full embedded version.
+const stageClass=s=>s==='Pre-Seed'?'badge-pre-seed':s==='Seed'?'badge-seed':'badge-series-a';
+const regionClass=r=>{const m={'North America':'badge-na','Europe':'badge-eu','Asia-Pacific':'badge-apac','India & South Asia':'badge-india','Middle East':'badge-me','Africa':'badge-africa','Latin America':'badge-latam'};return m[r]||'badge-na';};
+const regionColor=r=>{const m={'North America':'#818cf8','Europe':'#60a5fa','Asia-Pacific':'#fbbf24','India & South Asia':'#f472b6','Middle East':'#2dd4bf','Africa':'#fb923c','Latin America':'#c084fc'};return m[r]||'#818cf8';};
+const stageColor=s=>s==='Pre-Seed'?'#4ade80':s==='Seed'?'#60a5fa':'#fb923c';
+const esc=s=>(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+let COMPANIES=[];
+let IDEAS=[];
+async function loadData(){
+  try{
+    const [cr,ir]=await Promise.all([fetch('data/global_ai_startups.json'),fetch('data/ai_startup_ideas.json')]);
+    const rawC=await cr.json();
+    const rawI=await ir.json();
+    COMPANIES=rawC.map(c=>({
+      name:c.company_name,founded:c.founded_year,description:c.description,
+      vertical:c.vertical,stage:c.stage,funding:typeof c.funding_raised==='string'?c.funding_raised:JSON.stringify(c.funding_raised),
+      founders:typeof c.key_founders==='string'?c.key_founders:JSON.stringify(c.key_founders),
+      website:c.website,unique_value:c.unique_value,location:c.location,region:c.region,date_added:c.date_added
+    }));
+    IDEAS=rawI.map(i=>({
+      idea_name:i.idea_name,description:i.description,vertical:i.vertical,
+      estimated_market_size:i.estimated_market_size,why_now:i.why_now,
+      competitive_landscape:i.competitive_landscape,difficulty_to_execute:i.difficulty_to_execute,
+      potential_moat:i.potential_moat,relevance_to_founders_background:i.relevance_to_founders_background
+    }));
+  }catch(e){
+    console.error('Failed to load data:',e);
+    document.getElementById('metricsRow').innerHTML='<p style="color:red;padding:20px">Error loading data. Please ensure data/global_ai_startups.json and data/ai_startup_ideas.json are accessible.</p>';
+    return;
+  }
+  initApp();
+}
+function initApp(){
+  const stageCounts={};
+  COMPANIES.forEach(c=>{stageCounts[c.stage]=(stageCounts[c.stage]||0)+1;});
+  const regionCounts={};
+  COMPANIES.forEach(c=>{regionCounts[c.region]=(regionCounts[c.region]||0)+1;});
+  const verticalCounts={};
+  COMPANIES.forEach(c=>{verticalCounts[c.vertical]=(verticalCounts[c.vertical]||0)+1;});
+  const yearCounts={};
+  COMPANIES.forEach(c=>{yearCounts[c.founded]=(yearCounts[c.founded]||0)+1;});
+  function initMetrics(){
+    const mc=document.getElementById('metricsRow');
+    const items=[{label:'Total Companies',value:COMPANIES.length,cls:''},{label:'Pre-Seed',value:stageCounts['Pre-Seed']||0,cls:'pre-seed'},{label:'Seed',value:stageCounts['Seed']||0,cls:'seed'},{label:'Series A',value:stageCounts['Series A']||0,cls:'series-a'},{label:'Regions',value:Object.keys(regionCounts).length,cls:''},{label:'Verticals',value:Object.keys(verticalCounts).length,cls:''}];
+    mc.innerHTML=items.map(i=>`<div class="metric-card"><div class="label">${esc(i.label)}</div><div class="value ${i.cls}">${i.value}</div></div>`).join('');
+  }
+  function initWorldMapOverview(){
+    const container=document.getElementById('worldMapOverview');
+    const positions={'North America':{x:18,y:32},'Europe':{x:48,y:25},'Asia-Pacific':{x:78,y:35},'India & South Asia':{x:65,y:48},'Middle East':{x:56,y:42},'Africa':{x:48,y:60},'Latin America':{x:28,y:65}};
+    let html='<svg viewBox="0 0 100 80" style="position:absolute;inset:0;width:100%;height:100%;opacity:0.08" xmlns="http://www.w3.org/2000/svg"><path d="M8,15 Q12,10 20,12 Q28,10 30,18 Q32,25 28,32 Q22,38 18,42 Q14,45 12,40 Q8,35 10,28 Q7,22 8,15Z" fill="#888"/><path d="M16,50 Q20,45 24,48 Q28,52 30,58 Q32,65 28,72 Q22,75 18,70 Q14,65 16,50Z" fill="#888"/><path d="M38,12 Q45,8 52,12 Q55,15 58,14 Q60,18 56,22 Q52,25 48,24 Q44,28 40,25 Q36,20 38,12Z" fill="#888"/><path d="M40,35 Q45,32 50,36 Q55,42 52,55 Q48,65 44,68 Q40,62 38,50 Q36,42 40,35Z" fill="#888"/><path d="M55,28 Q60,22 68,25 Q75,20 82,22 Q88,18 92,24 Q90,32 85,35 Q80,38 72,36 Q66,34 62,38 Q56,35 55,28Z" fill="#888"/><path d="M60,40 Q65,38 70,42 Q72,48 68,52 Q64,50 60,45Z" fill="#888"/><path d="M75,40 Q82,38 88,42 Q92,48 88,55 Q82,52 78,48 Q74,45 75,40Z" fill="#888"/></svg>';
+    Object.entries(positions).forEach(([region,pos])=>{
+      const count=regionCounts[region]||0;
+      const col=regionColor(region);
+      const size=Math.max(70,Math.min(120,50+count*0.8));
+      html+=`<div class="region-bubble" style="left:${pos.x}%;top:${pos.y}%;width:${size}px;height:${size}px;transform:translate(-50%,-50%);border-color:${col};background:${col}18;" title="${region}: ${count} companies"><span class="count" style="color:${col}">${count}</span><span class="rname" style="color:${col}">${region}</span></div>`;
+    });
+    container.innerHTML=html;
+  }
+  let chartInstances=[];
+  function initCharts(){
+    if(window._chartsInit) return;
+    window._chartsInit=true;
+    Chart.defaults.color='#8b90a0';Chart.defaults.borderColor='#2a2e3e';Chart.defaults.font.family='Inter';
+    const stageLabels=['Pre-Seed','Seed','Series A'];
+    const stageData=stageLabels.map(s=>stageCounts[s]||0);
+    new Chart(document.getElementById('stageDonut'),{type:'doughnut',data:{labels:stageLabels,datasets:[{data:stageData,backgroundColor:['#4ade80','#60a5fa','#fb923c'],borderWidth:0,hoverOffset:8}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{padding:16,usePointStyle:true,pointStyle:'circle',font:{size:12}}}}}});
+    const sortedV=Object.entries(verticalCounts).sort((a,b)=>b[1]-a[1]).slice(0,12);
+    const usedLabels=new Set();
+    const vertLabels=sortedV.map(v=>{let n=v[0];if(n.length>22)n=n.slice(0,20)+'\u2026';if(usedLabels.has(n)){n=v[0].length>22?v[0].slice(0,20)+'\u2026':v[0];}usedLabels.add(n);return n;});
+    new Chart(document.getElementById('verticalsBar'),{type:'bar',data:{labels:vertLabels,datasets:[{data:sortedV.map(v=>v[1]),backgroundColor:'#818cf8',borderRadius:4,barThickness:18}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{title:function(items){return sortedV[items[0].dataIndex][0];}}}},layout:{padding:{left:20,right:10}},scales:{x:{grid:{display:false},ticks:{stepSize:1}},y:{afterFit:function(axis){axis.width=180;},grid:{display:false},ticks:{font:{size:10},autoSkip:false,padding:8}}}}});
+    const regionOrder=['North America','Europe','Asia-Pacific','India & South Asia','Africa','Middle East','Latin America'];
+    new Chart(document.getElementById('regionBar'),{type:'bar',data:{labels:regionOrder,datasets:[{data:regionOrder.map(r=>regionCounts[r]||0),backgroundColor:regionOrder.map(r=>regionColor(r)),borderRadius:4,barThickness:22}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:{display:false},ticks:{font:{size:11}}}}}});
+    const years=Object.keys(yearCounts).map(Number).sort();
+    new Chart(document.getElementById('yearBar'),{type:'bar',data:{labels:years,datasets:[{data:years.map(y=>yearCounts[y]||0),backgroundColor:'#60a5fa',borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:{display:false},beginAtZero:true}}}});
+  }
+  const PER_PAGE=30;
+  let dirState={filtered:[...COMPANIES],sort:{col:'name',asc:true},page:1,search:'',stage:'',region:''};
+  function initDirectory(){
+    if(window._dirInit) return;
+    window._dirInit=true;
+    applyDirFilters();
+    document.getElementById('dirSearch').addEventListener('input',e=>{dirState.search=e.target.value.toLowerCase();dirState.page=1;applyDirFilters();});
+    document.getElementById('dirStage').addEventListener('change',e=>{dirState.stage=e.target.value;dirState.page=1;applyDirFilters();});
+    document.getElementById('dirRegion').addEventListener('change',e=>{dirState.region=e.target.value;dirState.page=1;applyDirFilters();});
+    document.querySelectorAll('#dirTable th[data-sort]').forEach(th=>{th.addEventListener('click',()=>{const col=th.dataset.sort;if(dirState.sort.col===col) dirState.sort.asc=!dirState.sort.asc;else{dirState.sort.col=col;dirState.sort.asc=true;}dirState.page=1;applyDirFilters();});});
+  }
+  function applyDirFilters(){
+    let f=COMPANIES.filter(c=>{
+      if(dirState.search){const q=dirState.search;const hay=(c.name+' '+c.vertical+' '+c.location+' '+c.description+' '+c.founders).toLowerCase();if(!hay.includes(q)) return false;}
+      if(dirState.stage&&c.stage!==dirState.stage) return false;
+      if(dirState.region&&c.region!==dirState.region) return false;
+      return true;
+    });
+    const col=dirState.sort.col;
+    f.sort((a,b)=>{let va=a[col],vb=b[col];if(col==='founded'){va=Number(va);vb=Number(vb);}else{va=(va||'').toLowerCase();vb=(vb||'').toLowerCase();}if(va<vb)return dirState.sort.asc?-1:1;if(va>vb)return dirState.sort.asc?1:-1;return 0;});
+    dirState.filtered=f;
+    renderDirTable();
+  }
+  function renderDirTable(){
+    const f=dirState.filtered;const total=f.length;const pages=Math.ceil(total/PER_PAGE);
+    if(dirState.page>pages) dirState.page=Math.max(1,pages);
+    const start=(dirState.page-1)*PER_PAGE;const slice=f.slice(start,start+PER_PAGE);
+    document.getElementById('dirCount').textContent=`Showing ${Math.min(start+1,total)}\u2013${Math.min(start+PER_PAGE,total)} of ${total}`;
+    const body=document.getElementById('dirBody');let html='';
+    slice.forEach((c,i)=>{const idx=start+i;const ws=c.website&&c.website!=='#'?c.website:'';
+      html+=`<tr data-idx="${idx}" onclick="toggleExpand(this,${idx})" style="cursor:pointer"><td>${ws?`<a href="${esc(ws)}" target="_blank" rel="noopener" class="company-link" onclick="event.stopPropagation()">${esc(c.name)}</a>`:esc(c.name)}</td><td><span class="badge ${stageClass(c.stage)}">${esc(c.stage)}</span></td><td><span class="badge ${regionClass(c.region)}">${esc(c.region)}</span></td><td>${c.founded}</td><td style="max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(c.vertical)}">${esc(c.vertical)}</td><td style="white-space:nowrap">${esc(c.funding)}</td><td>${esc(c.location)}</td></tr>`;
+      html+=`<tr class="expand-row" id="expand-${idx}"><td colspan="7"><div class="expand-content"><p style="margin-bottom:8px"><strong>Description:</strong> ${esc(c.description)}</p><p style="margin-bottom:8px"><strong>Unique Value:</strong> ${esc(c.unique_value)}</p><p style="margin-bottom:8px"><strong>Founders:</strong> ${esc(c.founders)}</p>${ws?`<p><strong>Website:</strong> <a href="${esc(ws)}" target="_blank" rel="noopener" class="company-link">${esc(ws)}</a></p>`:''}</div></td></tr>`;
+    });
+    body.innerHTML=html;
+    const pg=document.getElementById('dirPagination');
+    if(pages<=1){pg.innerHTML='';return;}
+    let ph=`<button class="page-btn" onclick="dirPage(${dirState.page-1})" ${dirState.page===1?'disabled':''}>&#8592; Prev</button>`;
+    const maxShow=7;let startP=Math.max(1,dirState.page-3),endP=Math.min(pages,startP+maxShow-1);
+    if(endP-startP<maxShow-1) startP=Math.max(1,endP-maxShow+1);
+    for(let p=startP;p<=endP;p++){ph+=`<button class="page-btn ${p===dirState.page?'active':''}" onclick="dirPage(${p})">${p}</button>`;}
+    ph+=`<button class="page-btn" onclick="dirPage(${dirState.page+1})" ${dirState.page===pages?'disabled':''}>Next &#8594;</button>`;
+    pg.innerHTML=ph;
+  }
+  window.dirPage=function(p){dirState.page=p;renderDirTable();document.getElementById('mainContent').scrollTop=0;};
+  window.toggleExpand=function(row,idx){const exp=document.getElementById('expand-'+idx);const wasOpen=exp.classList.contains('show');document.querySelectorAll('.expand-row.show').forEach(e=>e.classList.remove('show'));document.querySelectorAll('tr.expanded').forEach(e=>e.classList.remove('expanded'));if(!wasOpen){exp.classList.add('show');row.classList.add('expanded');};};
+  function initWorldMap(){
+    if(window._wmInit) return;window._wmInit=true;
+    const container=document.getElementById('regionCards');
+    const regionOrder=['North America','Europe','Asia-Pacific','India & South Asia','Middle East','Africa','Latin America'];
+    let html='';
+    regionOrder.forEach(r=>{const cos=COMPANIES.filter(c=>c.region===r);const col=regionColor(r);const byVert={};cos.forEach(c=>{if(!byVert[c.vertical]) byVert[c.vertical]=[];byVert[c.vertical].push(c);});const sortedVerts=Object.entries(byVert).sort((a,b)=>b[1].length-a[1].length);
+      html+=`<div class="region-card" onclick="toggleRegion(this)" style="border-left:3px solid ${col}"><div class="region-card-header"><h3 style="color:${col}">${esc(r)}</h3><span class="rcount" style="color:${col}">${cos.length}</span></div><div style="font-size:12px;color:var(--text-muted)">${sortedVerts.length} verticals &middot; Click to expand</div><div class="region-companies">`;
+      sortedVerts.forEach(([vert,vcos])=>{html+=`<div style="margin-bottom:12px"><div style="font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:6px">${esc(vert)} (${vcos.length})</div>`;vcos.forEach(c=>{const ws=c.website&&c.website!=='#'?c.website:'';html+=`<div class="mini-company"><div class="mc-header">${ws?`<a href="${esc(ws)}" target="_blank" rel="noopener" class="company-link mc-name">${esc(c.name)}</a>`:`<span class="mc-name">${esc(c.name)}</span>`}<span class="badge ${stageClass(c.stage)}">${esc(c.stage)}</span><span style="font-size:11px;color:var(--text-muted)">${esc(c.funding)}</span></div><div class="mc-desc">${esc(c.description).slice(0,150)}${c.description.length>150?'...':''}</div></div>`;});html+=`</div>`;});html+=`</div></div>`;
+    });
+    container.innerHTML=html;
+  }
+  window.toggleRegion=function(card){const wasExpanded=card.classList.contains('expanded');document.querySelectorAll('.region-card.expanded').forEach(c=>c.classList.remove('expanded'));if(!wasExpanded) card.classList.add('expanded');};
+  function initVerticals(){
+    if(window._vertInit) return;window._vertInit=true;
+    renderVerticals('');
+    document.getElementById('verticalSearch').addEventListener('input',e=>renderVerticals(e.target.value.toLowerCase()));
+  }
+  function renderVerticals(q){
+    const byVert={};
+    COMPANIES.forEach(c=>{if(!byVert[c.vertical]) byVert[c.vertical]=[];byVert[c.vertical].push(c);});
+    let sorted=Object.entries(byVert).sort((a,b)=>b[1].length-a[1].length);
+    if(q) sorted=sorted.filter(([v])=>v.toLowerCase().includes(q));
+    document.getElementById('verticalSummary').textContent=`${sorted.length} verticals across ${COMPANIES.length} companies`;
+    const container=document.getElementById('verticalsList');let html='';
+    sorted.forEach(([vert,cos])=>{html+=`<div class="vertical-section"><div class="vertical-header" onclick="this.parentElement.classList.toggle('open')"><h3>${esc(vert)}</h3><span class="vcount">${cos.length} ${cos.length===1?'company':'companies'}</span></div><div class="vertical-body">`;
+      cos.forEach(c=>{const ws=c.website&&c.website!=='#'?c.website:'';html+=`<div class="mini-company"><div class="mc-header">${ws?`<a href="${esc(ws)}" target="_blank" rel="noopener" class="company-link mc-name">${esc(c.name)}</a>`:`<span class="mc-name">${esc(c.name)}</span>`}<span class="badge ${stageClass(c.stage)}">${esc(c.stage)}</span><span class="badge ${regionClass(c.region)}">${esc(c.region)}</span><span style="font-size:11px;color:var(--text-muted)">${esc(c.funding)}</span></div><div class="mc-desc">${esc(c.description).slice(0,200)}${c.description.length>200?'...':''}</div></div>`;});
+      html+=`</div></div>`;});
+    container.innerHTML=html;
+  }
+  function initIdeas(){
+    if(window._ideasInit) return;window._ideasInit=true;
+    renderIdeas('');
+    document.getElementById('ideasSearch').addEventListener('input',e=>renderIdeas(e.target.value.toLowerCase()));
+  }
+  function renderIdeas(q){
+    let filtered=IDEAS;if(q) filtered=IDEAS.filter(i=>(i.idea_name+' '+i.vertical+' '+i.description).toLowerCase().includes(q));
+    const container=document.getElementById('ideasGrid');let html='';
+    filtered.forEach(i=>{const diff=i.difficulty_to_execute;let diffLabel,diffClass;if(diff<=4){diffLabel='Easy';diffClass='badge-easy';}else if(diff<=6){diffLabel='Medium';diffClass='badge-medium';}else{diffLabel='Hard';diffClass='badge-hard';}
+      html+=`<div class="idea-card"><h3>${esc(i.idea_name)}</h3><div class="idea-meta"><span class="badge badge-na" style="font-size:10px">${esc(i.vertical)}</span><span class="badge ${diffClass}">Difficulty: ${diff}/10 (${diffLabel})</span></div><div class="idea-desc">${esc(i.description)}</div><div class="idea-detail"><strong>Market Size:</strong> ${esc(i.estimated_market_size)}</div><div class="idea-detail"><strong>Why Now:</strong> ${esc(i.why_now).slice(0,200)}${i.why_now.length>200?'...':''}</div><div class="idea-detail"><strong>Potential Moat:</strong> ${esc(i.potential_moat).slice(0,200)}${i.potential_moat.length>200?'...':''}</div><div class="idea-detail"><strong>Founder Relevance:</strong> ${esc(i.relevance_to_founders_background)}</div></div>`;
+    });
+    container.innerHTML=html;
+  }
+  function initFintech(){
+    if(window._finInit) return;window._finInit=true;
+    const keywords=['fintech','payment','e-commerce','insurance','accounting','lending','banking','credit','finance','insurtech'];
+    const fintechCos=COMPANIES.filter(c=>{const hay=(c.vertical+' '+c.description).toLowerCase();return keywords.some(k=>hay.includes(k));});
+    const container=document.getElementById('fintechGrid');let html='';
+    fintechCos.forEach(c=>{const ws=c.website&&c.website!=='#'?c.website:'';
+      html+=`<div class="fintech-card"><h3>${ws?`<a href="${esc(ws)}" target="_blank" rel="noopener" class="company-link">${esc(c.name)}</a>`:esc(c.name)}</h3><div class="fc-vertical">${esc(c.vertical)}</div><div class="fc-meta"><span class="badge ${stageClass(c.stage)}">${esc(c.stage)}</span><span class="badge ${regionClass(c.region)}">${esc(c.region)}</span><span style="font-size:11px;color:var(--text-muted)">${esc(c.funding)}</span></div><div class="fc-desc">${esc(c.description)}</div><div class="fc-detail"><strong>Unique Value:</strong> ${esc(c.unique_value)}</div><div class="fc-detail"><strong>Founders:</strong> ${esc(c.founders)}</div><div class="fc-detail"><strong>Location:</strong> ${esc(c.location)} &middot; Founded ${c.founded}</div></div>`;
+    });
+    container.innerHTML=html;
+  }
+  const tabs=document.querySelectorAll('.tab');
+  const panels=document.querySelectorAll('.panel');
+  function switchTab(id){
+    tabs.forEach(t=>t.classList.toggle('active',t.dataset.tab===id));
+    panels.forEach(p=>{p.classList.toggle('active',p.id==='panel-'+id);});
+    window.location.hash=id;
+    if(id==='overview'&&!window._chartsInit) initCharts();
+    if(id==='directory'&&!window._dirInit) initDirectory();
+    if(id==='worldmap'&&!window._wmInit) initWorldMap();
+    if(id==='verticals'&&!window._vertInit) initVerticals();
+    if(id==='ideas'&&!window._ideasInit) initIdeas();
+    if(id==='fintech'&&!window._finInit) initFintech();
+  }
+  tabs.forEach(t=>t.addEventListener('click',()=>switchTab(t.dataset.tab)));
+  window.addEventListener('hashchange',()=>{const h=location.hash.slice(1);if(h)switchTab(h);});
+  initMetrics();
+  initWorldMapOverview();
+  const hash=location.hash.slice(1);
+  if(hash) switchTab(hash); else switchTab('overview');
+}
+loadData();
+</script>
+</body>
+</html>
