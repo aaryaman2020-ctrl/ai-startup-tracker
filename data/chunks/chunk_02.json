@@ -1,0 +1,24 @@
+[
+  {
+    "company_name": "Tally (Bluebook)",
+    "founded_year": 2024,
+    "description": "Autonomous AI hiring and sourcing platform (tallyhq.com redirects to trycandid.com) that learns a company's hiring bar, engages candidates via personalized email and LinkedIn outreach, and delivers meeting-ready talent.",
+    "vertical": "HR Tech / Recruiting AI",
+    "stage": "Seed",
+    "funding_raised": "$500K YC Seed",
+    "key_founders": "Unknown",
+    "website": "https://trycandid.com",
+    "unique_value": "Learns your actual hiring bar from real decisions, not job descriptions, and runs autonomous outreach to deliver pre-qualified, meeting-ready candidates.",
+    "location": "USA",
+    "region": "North America",
+    "source": "original_dataset",
+    "date_added": "2026-03-01",
+    "product_name": "Candid AI Recruiting",
+    "product_description": "AI recruiting platform that sources, engages, and qualifies candidates autonomously based on actual hiring bar data.",
+    "how_it_works": "Learns company's hiring bar from past decisions. Searches LinkedIn and other databases. Sends personalized outreach at scale. Qualifies candidates via AI screening. Delivers only meeting-ready candidates to hiring teams.",
+    "target_customer": "Tech startups and mid-size companies looking to scale recruiting without adding headcount.",
+    "business_model": "Unknown (likely SaaS subscription or per-hire fee).",
+    "key_differentiator": "Learns actual hiring bar, not just job descriptions; fully autonomous from sourcing to meeting-scheduling.",
+    "competitors": "HireEZ, Gem, Beamery, traditional recruiters",
+    "investors": "Y Combinator (W25)"
+  }]
