@@ -1,0 +1,51 @@
+name: Assemble AI Startups Dataset
+
+on:
+  push:
+    paths:
+      - 'data/chunks/**'
+  workflow_dispatch:
+
+jobs:
+  assemble:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Assemble full dataset from chunks
+        run: |
+          python3 << 'PYTHON'
+          import json, glob, os
+          
+          # Read all chunks in order
+          chunk_files = sorted(glob.glob('data/chunks/chunk_*.json'))
+          print(f"Found {len(chunk_files)} chunk files")
+          
+          all_companies = []
+          for chunk_file in chunk_files:
+              with open(chunk_file, 'r') as f:
+                  chunk_data = json.load(f)
+              all_companies.extend(chunk_data)
+              print(f"  {chunk_file}: {len(chunk_data)} companies")
+          
+          print(f"Total: {len(all_companies)} companies")
+          
+          # Write the assembled file
+          with open('data/global_ai_startups.json', 'w') as f:
+              json.dump(all_companies, f, indent=1)
+          
+          print("Written data/global_ai_startups.json")
+          PYTHON
+          
+      - name: Commit assembled dataset
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add data/global_ai_startups.json
+          git diff --staged --stat
+          git commit -m "data: assemble global_ai_startups.json from chunks (205 companies)" || echo "No changes to commit"
+          
+      - name: Push changes
+        run: git push
