@@ -464,7 +464,7 @@ html,body{height:100%;overflow:hidden;font-family:'Inter',sans-serif;background:
 <div class="panel" id="panel-fintech">
   <div class="fintech-header">
     <h2>AI + Fintech Intersection</h2>
-    <p>Companies operating at the intersection of artificial intelligence and financial services — spanning payments, lending, insurance, accounting, banking, credit, and e-commerce infrastructure.</p>
+    <p>Companies operating at the intersection of artificial intelligence and financial services &mdash; spanning payments, lending, insurance, accounting, banking, credit, and e-commerce infrastructure.</p>
   </div>
   <div class="fintech-grid" id="fintechGrid"></div>
 </div>
@@ -1015,11 +1015,17 @@ function initFintech(){
 // INIT - Load data from external JSON files
 async function loadData() {
   try {
-    const [companiesRes, ideasRes] = await Promise.all([
-      fetch('data/global_ai_startups.json'),
-      fetch('data/ai_startup_ideas.json')
-    ]);
-    const companiesRaw = await companiesRes.json();
+    // Load companies from chunks
+    const allCompanies = [];
+    for (let i = 1; i <= 21; i++) {
+      const pad = String(i).padStart(2, '0');
+      const r = await fetch('data/chunks/chunk_' + pad + '.json');
+      if (!r.ok) throw new Error('Chunk ' + pad + ' failed');
+      const chunk = await r.json();
+      allCompanies.push(...chunk);
+    }
+    const ideasRes = await fetch('data/ai_startup_ideas.json');
+    const companiesRaw = allCompanies;
     const ideasRaw = await ideasRes.json();
     
     // Transform companies data
